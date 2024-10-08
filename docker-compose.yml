@@ -1,0 +1,45 @@
+version: '3.7'
+services:
+  gazebo:
+    image: ros2_ci:latest
+    build:
+      context: .
+      dockerfile: Dockerfile     
+    restart: always
+    environment: 
+      - DISPLAY=${DISPLAY}
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+    privileged: true
+    networks:
+      - ros2_net
+    command: ros2 launch tortoisebot_bringup bringup.launch.py use_sim_time:=True
+
+  waypoint:
+    image: ros2_ci:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    depends_on:
+      - gazebo
+    privileged: true
+    networks:
+      - ros2_net
+    command: ros2 run tortoisebot_waypoints main
+
+  test:
+    image: ros2_ci:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: on-failure
+    depends_on: 
+      - gazebo
+    privileged: true
+    networks:
+      - ros2_net
+    command: bash -c "sleep 10 && colcon test --packages-select tortoisebot_waypoints --event-handler=console_direct+"
+  
+networks:
+  ros2_net:
